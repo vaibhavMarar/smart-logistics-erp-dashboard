@@ -76,6 +76,12 @@ export const customerService = {
   getById: (id: number) => store.getById(id),
 
   create: (payload: Record<string, unknown>) => {
+    const { led_cd: _removed, ...rest } = payload;
+    const name = String(rest.led_name ?? "").trim();
+    if (!name) {
+      throw new Error("Customer name is required");
+    }
+
     const now = new Date().toISOString();
     return store.create({
       led_shortname: "",
@@ -84,6 +90,7 @@ export const customerService = {
       led_adr3: "",
       led_pin: "",
       led_stcd: "",
+      led_mob: "",
       led_email: "",
       led_panno: "",
       led_gstno: "",
@@ -101,16 +108,19 @@ export const customerService = {
       led_crdt: now,
       led_upby: "admin",
       led_updt: now,
-      ...payload,
+      ...rest,
+      led_name: name,
     });
   },
 
-  update: (id: number, payload: Record<string, unknown>) =>
-    store.update(id, {
-      ...payload,
+  update: (id: number, payload: Record<string, unknown>) => {
+    const { led_cd: _removed, ...rest } = payload;
+    return store.update(id, {
+      ...rest,
       led_upby: "admin",
       led_updt: new Date().toISOString(),
-    }),
+    });
+  },
 
   delete: (id: number) => store.remove(id),
 };

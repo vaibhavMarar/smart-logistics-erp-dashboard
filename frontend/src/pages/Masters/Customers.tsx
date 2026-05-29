@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { customerService } from "@/services/customerService";
+import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users } from "lucide-react";
 import { DynamicMasterForm } from "@/components/forms/DynamicMasterForm";
@@ -116,7 +117,6 @@ const Customers = () => {
       id: "led_pin",
       label: "Pin Code",
       type: "text" as const,
-      pattern: "^\\d{6}$",
       inputMode: "numeric" as const,
       visible: fieldVisibility["led_pin"],
     },
@@ -132,7 +132,6 @@ const Customers = () => {
       label: "Tel/Mob No.",
       type: "text" as const,
       required: true,
-      pattern: "^\\d{10}$",
       inputMode: "tel" as const,
       visible: fieldVisibility["led_mob"],
     },
@@ -146,14 +145,12 @@ const Customers = () => {
       id: "led_panno",
       label: "PAN No.",
       type: "text" as const,
-      pattern: "^[A-Z]{5}[0-9]{4}[A-Z]{1}$",
       visible: fieldVisibility["led_panno"],
     },
     {
       id: "led_gstno",
       label: "GSTIN",
       type: "text" as const,
-      pattern: "^([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1})$",
       visible: fieldVisibility["led_gstno"],
     },
     {
@@ -185,7 +182,6 @@ const Customers = () => {
       id: "led_acno",
       label: "Account No.",
       type: "text" as const,
-      pattern: "^\\d+$",
       inputMode: "numeric" as const,
       visible: fieldVisibility["led_acno"],
     },
@@ -193,7 +189,6 @@ const Customers = () => {
       id: "led_ifsc",
       label: "IFSC",
       type: "text" as const,
-      pattern: "^[A-Z]{4}0[0-9A-Z]{6}$",
       visible: fieldVisibility["led_ifsc"],
     },
     {
@@ -386,33 +381,60 @@ const Customers = () => {
   };
 
   const coercePayload = (raw: Record<string, any>) => {
+    const { led_cd: _removed, ...rest } = raw;
     return {
-      ...raw,
-      led_cat: raw.led_cat ? Number(raw.led_cat) : null,
+      ...rest,
+      led_cat: rest.led_cat ? Number(rest.led_cat) : null,
       led_tds:
-        raw.led_tds !== undefined && raw.led_tds !== ""
-          ? Number(raw.led_tds)
+        rest.led_tds !== undefined && rest.led_tds !== ""
+          ? Number(rest.led_tds)
           : null,
       led_active:
-        raw.led_active !== undefined && raw.led_active !== ""
-          ? Number(raw.led_active)
-          : 0,
+        rest.led_active !== undefined && rest.led_active !== ""
+          ? Number(rest.led_active)
+          : 1,
     };
   };
 
   const handleAddCustomer = (formData: Record<string, any>) => {
-    const payload = coercePayload(formData);
-    customerService.create(payload);
-    fetchCustomers();
+    try {
+      const payload = coercePayload(formData);
+      const created = customerService.create(payload);
+      setCustomers(customerService.getAll());
+      toast({
+        title: "Customer added",
+        description: `${created.led_name} was saved successfully.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Could not add customer",
+        description:
+          error instanceof Error ? error.message : "Something went wrong",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleUpdateCustomer = (formData: Record<string, any>) => {
     if (!editCustomer) return;
 
-    const payload = coercePayload(formData);
-    customerService.update(editCustomer.led_cd, payload);
-    fetchCustomers();
-    setEditCustomer(null);
+    try {
+      const payload = coercePayload(formData);
+      customerService.update(editCustomer.led_cd, payload);
+      setCustomers(customerService.getAll());
+      setEditCustomer(null);
+      toast({
+        title: "Customer updated",
+        description: "Changes were saved successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Could not update customer",
+        description:
+          error instanceof Error ? error.message : "Something went wrong",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeleteCustomer = (led_cd: number) => {

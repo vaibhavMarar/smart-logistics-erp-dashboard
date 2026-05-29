@@ -39,9 +39,17 @@ export function createLocalStore<T extends Record<string, unknown>>(
     localStorage.setItem(storageKey(collection), JSON.stringify(items));
   };
 
-  const nextId = (): number => {
-    const current = parseInt(localStorage.getItem(seqKey(collection)) || "0", 10);
-    const next = current + 1;
+  const nextId = (items: T[]): number => {
+    const storedSeq = localStorage.getItem(seqKey(collection));
+    const maxExisting = items.reduce(
+      (max, item) => Math.max(max, Number(item[idField]) || 0),
+      0
+    );
+    const current = storedSeq
+      ? parseInt(storedSeq, 10)
+      : maxExisting;
+    const synced = Math.max(current, maxExisting);
+    const next = synced + 1;
     localStorage.setItem(seqKey(collection), String(next));
     return next;
   };
@@ -54,7 +62,7 @@ export function createLocalStore<T extends Record<string, unknown>>(
 
     create: (payload: Omit<T, typeof idField>): T => {
       const items = readAll();
-      const record = { ...payload, [idField]: nextId() } as T;
+      const record = { ...payload, [idField]: nextId(items) } as T;
       items.push(record);
       writeAll(items);
       return record;

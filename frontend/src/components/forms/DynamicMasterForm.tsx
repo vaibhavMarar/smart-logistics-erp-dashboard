@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Settings2 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 interface SelectOption<T = string | number | boolean> {
   label: string;
@@ -62,6 +63,35 @@ export const DynamicMasterForm = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const errors: string[] = [];
+
+    for (const field of fields) {
+      if (!field.required) continue;
+      const value = formData[field.id];
+      if (value === undefined || value === null || String(value).trim() === "") {
+        errors.push(`${field.label} is required`);
+      }
+    }
+
+    for (const field of fields) {
+      if (!field.pattern) continue;
+      const value = String(formData[field.id] ?? "").trim();
+      if (!value) continue;
+      if (!new RegExp(field.pattern).test(value)) {
+        errors.push(`${field.label} has an invalid format`);
+      }
+    }
+
+    if (errors.length > 0) {
+      toast({
+        title: "Please fix the form",
+        description: errors.join(". "),
+        variant: "destructive",
+      });
+      return;
+    }
+
     onSubmit(formData);
     setFormData(
       fields.reduce((acc, field) => ({ ...acc, [field.id]: "" }), {})
@@ -74,11 +104,8 @@ export const DynamicMasterForm = ({
   };
 
   const visibleFields = fields.filter((field) => {
-    // If explicit visibility is set, use that
-    if (field.visible !== undefined) {
-      return field.visible;
-    }
-    // Otherwise, show all fields (form fields are typically all visible by default)
+    if (field.required) return true;
+    if (field.visible !== undefined) return field.visible;
     return true;
   });
 
@@ -145,6 +172,7 @@ export const DynamicMasterForm = ({
         </DialogHeader>
 
         <form
+          noValidate
           onSubmit={handleSubmit}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-4">
           {visibleFields.map((field) => (
@@ -156,7 +184,7 @@ export const DynamicMasterForm = ({
                   className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={String(formData[field.id] ?? "")}
                   onChange={(e) => handleInputChange(field.id, e.target.value)}
-                  required={field.required}>
+                  required={false}>
                   <option value="" disabled>
                     {field.placeholder || `Select ${field.label}`}
                   </option>
@@ -174,9 +202,9 @@ export const DynamicMasterForm = ({
                   type={field.type}
                   value={formData[field.id] ?? ""}
                   onChange={(e) => handleInputChange(field.id, e.target.value)}
-                  required={field.required}
+                  required={false}
                   placeholder={field.placeholder}
-                  pattern={field.pattern}
+                  pattern={undefined}
                   inputMode={field.inputMode}
                 />
               )}
