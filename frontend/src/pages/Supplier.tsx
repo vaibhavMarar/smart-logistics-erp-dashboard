@@ -3,8 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building } from "lucide-react";
 import { DynamicMasterForm } from "@/components/forms/DynamicMasterForm";
 import { SearchableTable } from "@/components/tables/SearchableTable";
-import axios from "axios";
-import { apiUrl } from "@/lib/api";
+import { supplierService } from "@/services/supplierService";
 
 interface Supplier {
   sup_cd: number;
@@ -309,10 +308,7 @@ const SupplierPage = () => {
   }, []);
 
   const fetchSuppliers = () => {
-    axios
-      .get(apiUrl("/api/suppliers"))
-      .then((res) => setSuppliers(res.data))
-      .catch((err) => console.error("❌ Failed to fetch suppliers", err));
+    setSuppliers(supplierService.getAll());
   };
 
   const coercePayload = (raw: Record<string, any>) => {
@@ -338,23 +334,16 @@ const SupplierPage = () => {
 
   const handleAdd = (formData: Record<string, any>) => {
     const payload = coercePayload(formData);
-    axios
-      .post(apiUrl("/api/suppliers"), payload)
-      .then(() => fetchSuppliers())
-      .catch((err) => console.error("❌ Failed to add supplier", err));
+    supplierService.create(payload);
+    fetchSuppliers();
   };
 
   const handleUpdate = (formData: Record<string, any>) => {
     if (!editSupplier) return;
-    // ✅ Don't include sup_cd in payload as it's in the URL
     const payload = coercePayload(formData);
-    axios
-      .put(apiUrl(`/api/suppliers/${editSupplier.sup_cd}`), payload)
-      .then(() => {
-        fetchSuppliers();
-        setEditSupplier(null);
-      })
-      .catch((err) => console.error("❌ Failed to update supplier", err));
+    supplierService.update(editSupplier.sup_cd, payload);
+    fetchSuppliers();
+    setEditSupplier(null);
   };
 
   const handleDelete = (sup_cd: number) => {
@@ -362,12 +351,8 @@ const SupplierPage = () => {
       "Are you sure you want to delete this supplier?"
     );
     if (!confirmed) return;
-    axios
-      .delete(apiUrl(`/api/suppliers/${sup_cd}`))
-      .then(() =>
-        setSuppliers((prev) => prev.filter((s) => s.sup_cd !== sup_cd))
-      )
-      .catch((err) => console.error("❌ Failed to delete supplier", err));
+    supplierService.delete(sup_cd);
+    setSuppliers((prev) => prev.filter((s) => s.sup_cd !== sup_cd));
   };
 
   const handleColumnVisibilityChange = (

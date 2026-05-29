@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import axios from "axios";
-import { apiUrl } from "@/lib/api";
+import { customerService } from "@/services/customerService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users } from "lucide-react";
 import { DynamicMasterForm } from "@/components/forms/DynamicMasterForm";
@@ -383,10 +382,7 @@ const Customers = () => {
   }, []);
 
   const fetchCustomers = () => {
-    axios
-      .get(apiUrl("/api/customers"))
-      .then((res) => setCustomers(res.data))
-      .catch((err) => console.error("❌ Failed to fetch customers", err));
+    setCustomers(customerService.getAll());
   };
 
   const coercePayload = (raw: Record<string, any>) => {
@@ -406,28 +402,17 @@ const Customers = () => {
 
   const handleAddCustomer = (formData: Record<string, any>) => {
     const payload = coercePayload(formData);
-
-    axios
-      .post(apiUrl("/api/customers"), payload)
-      .then(() => {
-        fetchCustomers(); // ✅ ensure list refreshes with new ID
-      })
-      .catch((err) => console.error("❌ Failed to add customer", err));
+    customerService.create(payload);
+    fetchCustomers();
   };
 
   const handleUpdateCustomer = (formData: Record<string, any>) => {
     if (!editCustomer) return;
 
-    // ✅ Don't include led_cd in payload as it's in the URL
     const payload = coercePayload(formData);
-
-    axios
-      .put(apiUrl(`/api/customers/${editCustomer.led_cd}`), payload)
-      .then(() => {
-        fetchCustomers(); // ✅ refresh after update
-        setEditCustomer(null);
-      })
-      .catch((err) => console.error("❌ Failed to update customer", err));
+    customerService.update(editCustomer.led_cd, payload);
+    fetchCustomers();
+    setEditCustomer(null);
   };
 
   const handleDeleteCustomer = (led_cd: number) => {
@@ -436,12 +421,8 @@ const Customers = () => {
     );
     if (!confirmed) return;
 
-    axios
-      .delete(apiUrl(`/api/customers/${led_cd}`))
-      .then(() => {
-        setCustomers((prev) => prev.filter((c) => c.led_cd !== led_cd));
-      })
-      .catch((err) => console.error("❌ Failed to delete customer", err));
+    customerService.delete(led_cd);
+    setCustomers((prev) => prev.filter((c) => c.led_cd !== led_cd));
   };
 
   const handleColumnVisibilityChange = (
