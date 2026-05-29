@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
@@ -5,8 +7,27 @@ const customerRoutes = require("./routes/customerRoutes");
 const supplierRoutes = require("./routes/supplierRoutes");
 const app = express();
 
-// Enable CORS for all origins
-app.use(cors());
+const defaultOrigins = [
+  "http://localhost:8080",
+  "http://localhost:5173",
+  "http://localhost:5000",
+];
+
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(",").map((origin) => origin.trim())
+  : defaultOrigins;
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      console.warn(`CORS blocked request from: ${origin}`);
+      return callback(null, false);
+    },
+  })
+);
 
 // Middleware
 app.use(bodyParser.json());
@@ -16,7 +37,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/api", customerRoutes);
 app.use("/api", supplierRoutes);
 
-// Health/root route to avoid 404 confusion
+// Health/root route for Render health checks
 app.get("/", (req, res) => {
   res.json({
     status: "ok",
